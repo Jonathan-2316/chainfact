@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChainFact — AI Fact Checker on Blockchain</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #0a0a0f;
+        --surface: #111118;
+        --surface2: #1a1a24;
+        --border: #2a2a3a;
+        --accent: #7c6aff;
+        --accent2: #4dffa6;
+        --text: #e8e8f0;
+        --muted: #6b6b80;
+        --danger: #ff6b6b;
+        --warn: #ffb347;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "DM Sans", sans-serif;
+        min-height: 100vh;
+        padding: 2rem 1rem;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(124, 106, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(124, 106, 255, 0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .container {
+        max-width: 680px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+      }
+      header {
+        margin-bottom: 2rem;
+      }
+      .logo {
+        font-family: "Space Mono", monospace;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      .logo span {
+        color: var(--accent2);
+      }
+      .tagline {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 4px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .wallet-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 1.5rem;
+      }
+      #connect-btn {
+        font-family: "Space Mono", monospace;
+        font-size: 0.72rem;
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      #connect-btn:hover {
+        background: rgba(124, 106, 255, 0.1);
+      }
+      #connect-btn.connected {
+        border-color: var(--accent2);
+        color: var(--accent2);
+      }
+      .wallet-addr {
+        font-family: "Space Mono", monospace;
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.75rem;
+        margin-bottom: 1.5rem;
+      }
+      .card-label {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+      }
+      .api-row {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .api-row input {
+        flex: 1;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: "Space Mono", monospace;
+        font-size: 0.72rem;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .api-row input:focus {
+        border-color: var(--accent);
+      }
+      .api-row input::placeholder {
+        color: var(--muted);
+      }
+      .btn-save {
+        font-family: "Space Mono", monospace;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 10px 16px;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .btn-save:hover {
+        border-color: var(--accent2);
+        color: var(--accent2);
+      }
+      textarea {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: "DM Sans", sans-serif;
+        font-size: 0.95rem;
+        padding: 14px;
+        resize: vertical;
+        min-height: 100px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      textarea:focus {
+        border-color: var(--accent);
+      }
+      textarea::placeholder {
+        color: var(--muted);
+      }
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 1rem;
+      }
+      .btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        font-family: "Space Mono", monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+        letter-spacing: 0.05em;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: #9580ff;
+      }
+      .btn-primary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .btn-secondary:hover {
+        border-color: var(--accent2);
+        color: var(--accent2);
+      }
+      .btn-secondary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .result-box {
+        display: none;
+        margin-top: 1.5rem;
+        padding: 1.25rem;
+        background: var(--surface2);
+        border-radius: 8px;
+        border-left: 3px solid var(--accent);
+      }
+      .result-box.true {
+        border-left-color: var(--accent2);
+      }
+      .result-box.false {
+        border-left-color: var(--danger);
+      }
+      .result-box.uncertain {
+        border-left-color: var(--warn);
+      }
+      .verdict-badge {
+        display: inline-block;
+        font-family: "Space Mono", monospace;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 4px 12px;
+        border-radius: 4px;
+        margin-bottom: 0.75rem;
+      }
+      .badge-true {
+        background: rgba(77, 255, 166, 0.15);
+        color: var(--accent2);
+      }
+      .badge-false {
+        background: rgba(255, 107, 107, 0.15);
+        color: var(--danger);
+      }
+      .badge-uncertain {
+        background: rgba(255, 179, 71, 0.15);
+        color: var(--warn);
+      }
+      .explanation {
+        font-size: 0.9rem;
+        color: var(--text);
+        line-height: 1.7;
+      }
+      .hash-row {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .hash-label {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      .hash-value {
+        font-family: "Space Mono", monospace;
+        font-size: 0.7rem;
+        color: var(--accent);
+        word-break: break-all;
+      }
+      .etherscan-link {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--accent2);
+        text-decoration: none;
+        border: 1px solid rgba(77, 255, 166, 0.3);
+        padding: 3px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+      .etherscan-link:hover {
+        background: rgba(77, 255, 166, 0.1);
+      }
+      .status {
+        font-family: "Space Mono", monospace;
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin-top: 1rem;
+        min-height: 20px;
+      }
+      .status.loading {
+        color: var(--accent);
+      }
+      .status.success {
+        color: var(--accent2);
+      }
+      .status.error {
+        color: var(--danger);
+      }
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+      .history-title {
+        font-family: "Space Mono", monospace;
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .clear-btn {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px 8px;
+      }
+      .clear-btn:hover {
+        color: var(--danger);
+      }
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .history-item {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.85rem;
+      }
+      .history-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .history-time {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+        color: var(--muted);
+      }
+      .history-claim {
+        color: var(--text);
+        margin-bottom: 6px;
+        line-height: 1.5;
+      }
+      .history-tx {
+        font-family: "Space Mono", monospace;
+        font-size: 0.65rem;
+      }
+      .no-history {
+        font-family: "Space Mono", monospace;
+        font-size: 0.75rem;
+        color: var(--muted);
+        text-align: center;
+        padding: 2rem;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border: 2px solid rgba(124, 106, 255, 0.3);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="logo">Chain<span>Fact</span></div>
+        <div class="tagline">AI Fact Checker · Ethereum Sepolia Testnet</div>
+        <div class="wallet-bar">
+          <button id="connect-btn" onclick="connectWallet()">
+            Connect Wallet
+          </button>
+          <span class="wallet-addr" id="wallet-addr"></span>
+        </div>
+      </header>
+
+      <!-- API Key input -->
+      <div class="card">
+        <div class="card-label">
+          // Gemini API Key (saved in your browser only)
+        </div>
+        <div class="api-row">
+          <input
+            type="password"
+            id="api-key-input"
+            placeholder="Paste your Gemini API key here (AIza...)"
+          />
+          <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+        </div>
+        <div class="status" id="api-status">
+          Get a free key at aistudio.google.com
+        </div>
+      </div>
+
+      <!-- Claim input -->
+      <div class="card">
+        <div class="card-label">// Enter a claim to verify</div>
+        <textarea
+          id="claim-input"
+          placeholder="e.g. The Great Wall of China is visible from space."
+        ></textarea>
+        <div class="btn-row">
+          <button
+            class="btn btn-primary"
+            id="verify-btn"
+            onclick="verifyClaim()"
+          >
+            Verify with AI
+          </button>
+          <button
+            class="btn btn-secondary"
+            id="chain-btn"
+            onclick="saveToChain()"
+            disabled
+          >
+            Save to Chain
+          </button>
+        </div>
+        <div class="status" id="status"></div>
+
+        <div class="result-box" id="result-box">
+          <div id="verdict-badge" class="verdict-badge"></div>
+          <div class="explanation" id="explanation"></div>
+          <div class="hash-row" id="hash-row" style="display: none">
+            <span class="hash-label">TX Hash:</span>
+            <span class="hash-value" id="tx-hash-display"></span>
+            <a
+              id="etherscan-link"
+              class="etherscan-link"
+              href="#"
+              target="_blank"
+              >↗ Etherscan</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="card">
+        <div class="history-header">
+          <div class="history-title">// Verification history</div>
+          <button class="clear-btn" onclick="clearHistory()">Clear all</button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
